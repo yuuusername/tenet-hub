@@ -6,8 +6,12 @@ from . import VERSION
 UA = f"TENET-Hub/{VERSION}"
 
 
-def get(url, timeout=30, limit=50_000_000):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Cache-Control": "no-cache"})
+def _req(url, headers=None):
+    return urllib.request.Request(url, headers={"User-Agent": UA, "Cache-Control": "no-cache", **(headers or {})})
+
+
+def get(url, timeout=30, limit=50_000_000, headers=None):
+    req = _req(url, headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         data = r.read(limit + 1)
     if len(data) > limit:
@@ -15,9 +19,9 @@ def get(url, timeout=30, limit=50_000_000):
     return data
 
 
-def download(url, path, progress=lambda frac: None, timeout=30, limit=300_000_000):
+def download(url, path, progress=lambda frac: None, timeout=30, limit=300_000_000, headers=None):
     """Saves a large file to `path`. -> its SHA-256 (upper-case hex). progress(0..1) if the size is known."""
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Cache-Control": "no-cache"})
+    req = _req(url, headers)
     sha, done = hashlib.sha256(), 0
     with urllib.request.urlopen(req, timeout=timeout) as r, open(path, "wb") as f:
         total = int(r.headers.get("Content-Length") or 0)

@@ -19,6 +19,7 @@ import glob, os, re, subprocess, sys, tempfile, threading, time, urllib.error
 from . import net
 
 RELEASES = "https://github.com/yuuusername/tenet-hub/releases"
+API = "https://api.github.com/repos/yuuusername/tenet-hub"   # same files, other route (see _fetch)
 ASSET = "TenetHub.exe"
 LIMIT = 300_000_000
 CHECK_TIMEOUT = 180                # seconds; a one-file .exe unpacks itself first (and antivirus may scan it)
@@ -71,6 +72,27 @@ def check_exe(path, version):
             pass
 
 
+def _fetch(version, url, name, fetch):
+    """fetch(url, headers) from the release's download link; if GitHub fails there (a 5xx or no
+    answer, as happens for a while after some releases), the same asset through GitHub's API."""
+    try:
+        return fetch(url, None)
+    except urllib.error.HTTPError as e:
+        if e.code < 500:
+            raise
+        first = e
+    except (urllib.error.URLError, TimeoutError) as e:
+        first = e
+    try:
+        rel = net.get_json(f"{API}/releases/tags/v{version}")
+        asset = next(a for a in rel.get("assets", []) if a.get("name") == name)
+        if not str(asset.get("url", "")).startswith(API + "/releases/assets/"):
+            raise first
+        return fetch(asset["url"], {"Accept": "application/octet-stream"})
+    except (OSError, ValueError, StopIteration):
+        raise first
+
+
 def prepare(version, exe=None, progress=lambda frac: None):
     """Downloads and verifies a release. -> the path of the checked .exe, ready for install()."""
     if not re.fullmatch(r"\d+(\.\d+)*", str(version)):
@@ -79,11 +101,12 @@ def prepare(version, exe=None, progress=lambda frac: None):
     url = f"{RELEASES}/download/v{version}/{ASSET}"
     new = _download_path(exe)
     try:
-        expected = net.get(url + ".sha256", limit=1000).decode("ascii").split()
+        expected = _fetch(version, url + ".sha256", ASSET + ".sha256",
+                          lambda u, h: net.get(u, limit=1000, headers=h)).decode("ascii").split()
         expected = expected[0].upper() if expected else ""
         if not re.fullmatch(r"[0-9A-F]{64}", expected):
             raise UpdateError("The checksum published with the release isn't readable.")
-        got = net.download(url, new, progress, limit=LIMIT)
+        got = _fetch(version, url, ASSET, lambda u, h: net.download(u, new, progress, limit=LIMIT, headers=h))
         if got != expected:
             raise UpdateError("The download doesn't match the release's checksum.")
         check_exe(new, str(version))

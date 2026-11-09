@@ -2,7 +2,7 @@
 
     python tests/test_updater.py
 """
-import functools, hashlib, http.server, os, subprocess, sys, tempfile, threading
+import functools, hashlib, http.server, json, os, subprocess, sys, tempfile, threading
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP = tempfile.mkdtemp(prefix="tenethub-update-")
@@ -33,7 +33,10 @@ def write(p, data):
 WEB = os.path.join(TMP, "web")
 os.makedirs(WEB)
 srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(
-    type("Q", (http.server.SimpleHTTPRequestHandler,), {"log_message": lambda *a: None}), directory=WEB))
+    type("Q", (http.server.SimpleHTTPRequestHandler,), {
+        "log_message": lambda *a: None,
+        "do_GET": lambda self: self.send_error(504) if self.path.startswith("/down/")   # GitHub having a bad day
+        else http.server.SimpleHTTPRequestHandler.do_GET(self)}), directory=WEB))
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 updater.RELEASES = f"http://127.0.0.1:{srv.server_port}/releases"
 NEW = os.urandom(3_000_000)
@@ -85,6 +88,22 @@ check(f"a release that isn't built yet: {err}", err and "isn't ready" in err)
 
 err = failure(lambda: updater.prepare("../../evil", exe))
 check(f"a version that isn't a version: {err}", err and "version number" in err)
+
+# GitHub's download link failing (504) for a release: the same files through its API instead
+base = f"http://127.0.0.1:{srv.server_port}"
+updater.RELEASES, updater.API = f"{base}/down", f"{base}/api"
+assets = os.path.join(WEB, "api", "releases", "assets")
+write(os.path.join(assets, "1"), NEW)
+write(os.path.join(assets, "2"), hashlib.sha256(NEW).hexdigest().upper().encode())
+write(os.path.join(WEB, "api", "releases", "tags", "v2.0.4"), json.dumps({"assets": [
+    {"name": updater.ASSET, "url": f"{updater.API}/releases/assets/1"},
+    {"name": updater.ASSET + ".sha256", "url": f"{updater.API}/releases/assets/2"}]}).encode())
+exe = app_folder()
+new = updater.prepare("2.0.4", exe)
+check("a 504 on the download link falls back to GitHub's API", read(new) == NEW)
+err = failure(lambda: updater.prepare("2.0.5", exe))
+check(f"...and says the download failed when that has nothing either: {err}", err and "504" in err)
+updater.RELEASES = f"{base}/releases"
 
 
 def refuses(path, version):
