@@ -1,16 +1,15 @@
-**TENET Hub 1.3.0**: TENET Hub can now update itself with one click.
+**TENET Hub 1.3.1**: fixes packages wrongly saying they need a newer REVIVER.
 
-Download **TenetHub.exe** below and run it (Windows 10 or 11, no installer). If you already have TENET Hub, quit it from the tray and replace the old TenetHub.exe with this one. This is the last time you need to do that by hand. If you set up the built-in temperature sensors and the new exe is in a different place, click **Set up again** in the PC stats tab.
-
-## New
-
-- **One-click updates for TENET Hub itself:** when a new version is out, click the banner at the top of the window, or **Update and restart** in Settings. TENET Hub downloads it, checks it, replaces itself and restarts, in the same place with your settings kept. If it can't (for example, its folder is read-only), your current version keeps running and it offers the download page instead.
+Download **TenetHub.exe** below and run it (Windows 10 or 11, no installer). If you have TENET Hub 1.3.0 or newer, click the update banner or **Update and restart** in Settings instead.
 
 ## Fixed
 
-- **Stored animations that fail now say why:** if an animation package can't be stored on the keyboard, the Packages tab keeps showing the reason, and it's written to the log. Turn the package off and on to try again.
+- **"Needs REVIVER vN or newer" on a keyboard that has it:** if the keyboard wasn't answering yet when TENET Hub started, it was taken for the official firmware and packages were held back. TENET Hub now waits for the keyboard to answer before deciding which firmware it runs.
+- **Packages tab stuck on an old status:** it now updates by itself when the keyboard connects or a package starts or stops.
 
 ## Everything from earlier versions
+
+- One-click updates for TENET Hub itself, and stored animations that fail now say why (1.3.0)
 
 - Stored animations with REVIVER v26: animation packages get a screen of their own and play even with the PC off
 - Lighting tab: one colour or off, with a brightness slider
