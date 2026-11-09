@@ -109,7 +109,9 @@ class Keyboard:
             return FirmwareInfo("patch", 4)
         if self.cmd(0x0C, bytes([1, 0xE3])) is not None:     # v2/v3: raw OLED (NOP)
             return FirmwareInfo("patch", 2)
-        return FirmwareInfo("official")
+        if self.brightness() is None:                        # not even a stock command answered: the
+            return None                                      # keyboard isn't talking yet (just plugged in /
+        return FirmwareInfo("official")                      # woke up / another app had it), not "official"
 
     # --- helpers used by the host ---------------------------------------------------------
     def mode(self):

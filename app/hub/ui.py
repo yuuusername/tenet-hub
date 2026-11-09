@@ -84,7 +84,8 @@ class App:
         if now - getattr(self, "_stats_ui_at", 0) >= 1:
             self._stats_ui_at = now
             self._stats_live()
-            st = (self.host.storing, tuple(sorted(self.host.stored())))
+            st = (self.host.storing, tuple(sorted(self.host.stored())), str(self.host.fw),
+                  tuple(sorted(self.host.running)), tuple(sorted(self.host.problems.items())))
             if st != getattr(self, "_storing_seen", None):          # stored-screen progress in the Packages tab
                 self._storing_seen = st
                 self.refresh_packages()

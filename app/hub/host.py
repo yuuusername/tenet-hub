@@ -228,6 +228,10 @@ class Host:
             return False
         kb = Keyboard(path)
         fw = kb.probe()
+        if fw is None:
+            kb.close()
+            self.status = "Keyboard found but not answering yet - retrying"
+            return False
         self.kb, self.fw = kb, fw
         self._sent_list, self._sent_at = None, 0.0
         self._clock_at, self._clock_fmt = 0.0, None   # last clock sync; 12h flag sent this connection
